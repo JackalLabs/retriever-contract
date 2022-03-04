@@ -10,4 +10,12 @@ pub struct State {
     pub owner: Addr,
 }
 
-pub const STATE: Item<State> = Item::new("state");
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Name {
+    pub id: String,
+    pub expires: u64;
+    pub owner: Addr,
+}
+
+pub const DNS: Map<&str, Name> = Map::new("dns");
+
