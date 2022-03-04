@@ -2,7 +2,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::Addr;
-use cw_storage_plus::Item;
+use cw_storage_plus::{Item, Map};
+
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct State {
@@ -13,9 +14,10 @@ pub struct State {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Name {
     pub id: String,
-    pub expires: u64;
+    pub expires: u64,
     pub owner: Addr,
 }
 
-pub const DNS: Map<&str, Name> = Map::new("dns");
+pub const STATE: Item<State> = Item::new("state");
+pub const JNS: Map<&str, Name> = Map::new("jns");
 
