@@ -1,14 +1,15 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "CountResponse",
+  "title": "BlocksResponse",
   "type": "object",
   "required": [
-    "count"
+    "blocks_per_year"
   ],
   "properties": {
-    "count": {
+    "blocks_per_year": {
       "type": "integer",
-      "format": "int32"
+      "format": "uint64",
+      "minimum": 0.0
     }
   }
 }

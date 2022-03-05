@@ -38,7 +38,7 @@ mod tests {
         let mut app = mock_app();
         let cw_template_id = app.store_code(contract_template());
 
-        let msg = InstantiateMsg { count: 1i32 };
+        let msg = InstantiateMsg { blocks_per_year: 1u64 };
         let cw_template_contract_addr = app
             .instantiate_contract(
                 cw_template_id,
@@ -55,17 +55,17 @@ mod tests {
         (app, cw_template_contract)
     }
 
-    mod count {
+    mod blocks {
         use super::*;
         use crate::msg::ExecuteMsg;
 
         #[test]
-        fn count() {
+        fn blocks() {
             let (mut app, cw_template_contract) = proper_instantiate();
 
-            let msg = ExecuteMsg::Increment {};
+            let msg = ExecuteMsg::SetBlocksPerYear { blocks_per_year: 5048093 };
             let cosmos_msg = cw_template_contract.call(msg).unwrap();
-            app.execute(Addr::unchecked(USER), cosmos_msg).unwrap();
+            app.execute(Addr::unchecked(ADMIN), cosmos_msg).unwrap();
         }
     }
 }

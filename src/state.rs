@@ -7,15 +7,28 @@ use cw_storage_plus::{Item, Map};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct State {
-    pub count: i32,
-    pub owner: Addr,
+    pub blocks_per_year: u64,   // initially 5048093
+    pub owner: Addr,            // who owns the contract
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Name {
-    pub id: String,
-    pub expires: u64,
-    pub owner: Addr,
+
+    pub id: String,                 // the name itself
+    pub expires: u64,               // the block number for which the name expires
+    pub owner: Addr,                // the address that owns the name
+
+    // a URL to an avatar image to be assocaited with the name
+    pub avatar_url: Option<String>, 
+
+    /// socials ///
+    pub website: Option<String>,
+    pub email: Option<String>,
+    pub twitter: Option<String>,
+    pub telegram: Option<String>,
+    pub discord: Option<String>,
+    pub instagram: Option<String>,
+    pub reddit: Option<String>
 }
 
 pub const STATE: Item<State> = Item::new("state");

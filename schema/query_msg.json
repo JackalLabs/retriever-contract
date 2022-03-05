@@ -5,10 +5,22 @@
     {
       "type": "object",
       "required": [
-        "get_count"
+        "get_owner"
       ],
       "properties": {
-        "get_count": {
+        "get_owner": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_blocks_per_year"
+      ],
+      "properties": {
+        "get_blocks_per_year": {
           "type": "object"
         }
       },
