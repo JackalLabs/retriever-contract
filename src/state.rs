@@ -9,6 +9,14 @@ use cw_storage_plus::{Item, Map};
 pub struct State {
     pub blocks_per_year: u64,   // initially 5048093
     pub owner: Addr,            // who owns the contract
+
+    //prices to register a name per character count
+    pub cost_for_6: u32,
+    pub cost_for_5: u32,
+    pub cost_for_4: u32,
+    pub cost_for_3: u32,
+    pub cost_for_2: u32,
+    pub cost_for_1: u32
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

@@ -21,6 +21,44 @@ pub fn instantiate(
     let state = State {
         blocks_per_year: msg.blocks_per_year,
         owner: info.sender.clone(),
+
+        //prices to register per character count
+        cost_for_6: {
+            match msg.cost_for_6 {
+                Some(x) => {x},
+                None => {156250}
+            }
+        },
+        cost_for_5: {
+            match msg.cost_for_5 {
+                Some(x) => {x},
+                None => {312500}
+            }
+        },
+        cost_for_4: {
+            match msg.cost_for_4 {
+                Some(x) => {x},
+                None => {625000}
+            }
+        },
+        cost_for_3: {
+            match msg.cost_for_3 {
+                Some(x) => {x},
+                None => {1250000}
+            }
+        },
+        cost_for_2: {
+            match msg.cost_for_2 {
+                Some(x) => {x},
+                None => {2500000}
+            }
+        },
+        cost_for_1: {
+            match msg.cost_for_1 {
+                Some(x) => {x},
+                None => {5000000}
+            }
+        },
     };
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     STATE.save(deps.storage, &state)?;
@@ -90,11 +128,21 @@ mod tests {
     use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
     use cosmwasm_std::{coins, from_binary, BlockInfo};
 
+    const INT_MSG: InstantiateMsg = InstantiateMsg { 
+        blocks_per_year: 5048093, 
+        cost_for_6: Some(1), 
+        cost_for_5: Some(2), 
+        cost_for_4: Some(4), 
+        cost_for_3: Some(8), 
+        cost_for_2: Some(16), 
+        cost_for_1: Some(32),
+    };
+
     #[test]
     fn proper_initialization() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
-        let msg = InstantiateMsg { blocks_per_year: 5048093 };
+        let msg = INT_MSG.clone();
         let info = mock_info("creator", &coins(1000, "earth"));
 
         // we can just call .unwrap() to assert this was a success
@@ -111,7 +159,7 @@ mod tests {
     fn change_block_count() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
-        let msg = InstantiateMsg { blocks_per_year: 5048093 };
+        let msg = INT_MSG.clone();
         let info = mock_info("creator", &coins(2, "token"));
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
@@ -130,7 +178,7 @@ mod tests {
     fn change_owner() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
-        let msg = InstantiateMsg { blocks_per_year: 5048093 };
+        let msg = INT_MSG.clone();
         let info = mock_info("creator", &coins(2, "token"));
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 

@@ -38,7 +38,15 @@ mod tests {
         let mut app = mock_app();
         let cw_template_id = app.store_code(contract_template());
 
-        let msg = InstantiateMsg { blocks_per_year: 1u64 };
+        let msg = InstantiateMsg { 
+            blocks_per_year: 5048093, 
+            cost_for_6: Some(1), 
+            cost_for_5: Some(2), 
+            cost_for_4: Some(4), 
+            cost_for_3: Some(8), 
+            cost_for_2: Some(16), 
+            cost_for_1: Some(32),
+        };
         let cw_template_contract_addr = app
             .instantiate_contract(
                 cw_template_id,

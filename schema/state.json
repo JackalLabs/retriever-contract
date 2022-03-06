@@ -4,12 +4,48 @@
   "type": "object",
   "required": [
     "blocks_per_year",
+    "cost_for_1",
+    "cost_for_2",
+    "cost_for_3",
+    "cost_for_4",
+    "cost_for_5",
+    "cost_for_6",
     "owner"
   ],
   "properties": {
     "blocks_per_year": {
       "type": "integer",
       "format": "uint64",
+      "minimum": 0.0
+    },
+    "cost_for_1": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "cost_for_2": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "cost_for_3": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "cost_for_4": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "cost_for_5": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "cost_for_6": {
+      "type": "integer",
+      "format": "uint32",
       "minimum": 0.0
     },
     "owner": {
