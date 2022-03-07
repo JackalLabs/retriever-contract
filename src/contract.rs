@@ -88,7 +88,7 @@ pub fn execute(
 
 pub fn try_add_time(
     deps: DepsMut, 
-    env: Env, 
+    _env: Env, 
     info: MessageInfo, 
     name: String, 
     years: u32
@@ -109,30 +109,30 @@ pub fn try_add_time(
     let char_count = name.chars().count();
 
     let state = STATE.load(store).unwrap();
-    let mut cost = state.cost_for_6;
+    let mut _cost = state.cost_for_6;
 
     match char_count {
         1 => {
-            cost = state.cost_for_1;
+            _cost = state.cost_for_1;
         },
         2 => {
-            cost = state.cost_for_2;
+            _cost = state.cost_for_2;
         },
         3 => {
-            cost = state.cost_for_3;
+            _cost = state.cost_for_3;
         },
         4 => {
-            cost = state.cost_for_4;
+            _cost = state.cost_for_4;
         },
         5 => {
-            cost = state.cost_for_5;
+            _cost = state.cost_for_5;
         },
         _ => {
-            cost = state.cost_for_6;
+            _cost = state.cost_for_6;
         }
     }
 
-    let total_cost = cost * years;
+    let total_cost = _cost * years;
 
     let funds = NativeBalance(info.funds);
     let passes = funds.has(&Coin {denom: String::from("ujuno"), amount: Uint128::from(total_cost)});
@@ -187,30 +187,30 @@ pub fn try_register_name(
         None => {}
     }
 
-    let mut cost = state.cost_for_6;
+    let mut _cost = state.cost_for_6;
 
     match char_count {
         1 => {
-            cost = state.cost_for_1;
+            _cost = state.cost_for_1;
         },
         2 => {
-            cost = state.cost_for_2;
+            _cost = state.cost_for_2;
         },
         3 => {
-            cost = state.cost_for_3;
+            _cost = state.cost_for_3;
         },
         4 => {
-            cost = state.cost_for_4;
+            _cost = state.cost_for_4;
         },
         5 => {
-            cost = state.cost_for_5;
+            _cost = state.cost_for_5;
         },
         _ => {
-            cost = state.cost_for_6;
+            _cost = state.cost_for_6;
         }
     }
 
-    let total_cost = cost * years;
+    let total_cost = _cost * years;
 
     let funds = NativeBalance(info.funds);
     let passes = funds.has(&Coin {denom: String::from("ujuno"), amount: Uint128::from(total_cost)});
@@ -270,11 +270,11 @@ pub fn try_set_owner(deps: DepsMut, info: MessageInfo, owner: Addr) -> Result<Re
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetBlocksPerYear {} => to_binary(&query_blocks_per_year(deps)?),
         QueryMsg::GetOwner {} => to_binary(&query_owner(deps)?),
-        QueryMsg::ResolveName { name } => to_binary(&query_name_owner(deps, name)?),
+        QueryMsg::ResolveName { name } => to_binary(&query_name_owner(deps, env, name)?),
     }
 }
 
@@ -288,13 +288,17 @@ fn query_owner(deps: Deps) -> StdResult<OwnerResponse> {
     Ok(OwnerResponse { owner: state.owner })
 }
 
-fn query_name_owner(deps: Deps, name: String) -> StdResult<OwnerResponse> {
+fn query_name_owner(deps: Deps, env: Env, name: String) -> StdResult<OwnerResponse> {
     let exists = JNS.may_load(deps.storage, &name);
     if exists.is_err() {
         return Err(StdError::NotFound { kind: "Name is not registered.".to_string()});
     }
 
-    let ret_name = JNS.load(deps.storage, &name)?;
+    let ret_name = exists.unwrap().unwrap();
+
+    if ret_name.expires <= env.block.height {
+        return Err(StdError::NotFound { kind: "Name is not registered.".to_string()});
+    }
 
     Ok(OwnerResponse { owner: ret_name.owner })
 }
@@ -303,7 +307,7 @@ fn query_name_owner(deps: Deps, name: String) -> StdResult<OwnerResponse> {
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary, BlockInfo};
+    use cosmwasm_std::{coins, from_binary};
 
     const INT_MSG: InstantiateMsg = InstantiateMsg { 
         blocks_per_year: 5048093, 
