@@ -1,11 +1,12 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr, Coin, Uint128, StdError};
 use cw2::set_contract_version;
+use cw_utils::{ NativeBalance };
 
 use crate::error::ContractError;
 use crate::msg::{OwnerResponse, BlocksResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{State, STATE};
+use crate::state::{State, STATE, JNS, Name};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ibc_name_service";
@@ -72,14 +73,106 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::SetBlocksPerYear { blocks_per_year} => try_set_blocks_per_year(deps, info, blocks_per_year),
         ExecuteMsg::SetOwner { owner } => try_set_owner(deps, info, owner),
+        ExecuteMsg::RegisterName { name, years , avatar_url, website, email, twitter, telegram, discord, instagram, reddit} => try_register_name(deps, env, info, name, years, avatar_url, website, email, twitter, telegram, discord, instagram, reddit),
+
     }
+}
+
+pub fn try_register_name(
+    deps: DepsMut, 
+    env: Env, 
+    info: MessageInfo, 
+    name: String, 
+    years: u32, 
+    avatar_url: Option<String>, 
+    website: Option<String>, 
+    email: Option<String>,
+    twitter: Option<String>, 
+    telegram: Option<String>, 
+    discord: Option<String>, 
+    instagram: Option<String>, 
+    reddit: Option<String>
+) -> Result<Response, ContractError> {
+
+    // load and save with extra key argument
+    let store = deps.storage;
+
+    let char_count = name.chars().count();
+
+
+    let state = STATE.load(store).unwrap();
+
+    let mut cost = state.cost_for_6;
+
+    match char_count {
+        1 => {
+            cost = state.cost_for_1;
+        },
+        2 => {
+            cost = state.cost_for_2;
+        },
+        3 => {
+            cost = state.cost_for_3;
+        },
+        4 => {
+            cost = state.cost_for_4;
+        },
+        5 => {
+            cost = state.cost_for_5;
+        },
+        _ => {
+            cost = state.cost_for_6;
+        }
+    }
+
+    let total_cost = cost * years;
+
+    let funds = NativeBalance(info.funds);
+    let passes = funds.has(&Coin {denom: String::from("ujuno"), amount: Uint128::from(total_cost)});
+    if !passes {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let current_time = env.block.height;
+    
+
+    let existing_name = JNS.may_load(store, &name.clone())?;    // checks if the user is able to register the name
+    match existing_name {
+        Some(x) => {
+            if x.expires > current_time {
+                return Err(ContractError::Unauthorized {});
+            }
+        }
+        None => {}
+    }
+
+    let expiration_date = current_time + ( state.blocks_per_year * years as u64) ; // creates the name data
+    let data = Name { 
+        id: name.clone(), 
+        expires: expiration_date, 
+        owner: info.sender, 
+        avatar_url: avatar_url, 
+        website: website, 
+        email: email, 
+        twitter: twitter, 
+        telegram: telegram, 
+        discord: discord, 
+        instagram: instagram, 
+        reddit: reddit 
+    };
+
+    
+
+    JNS.save(store, &name.clone(), &data)?;
+
+    Ok(Response::new().add_attribute("method", "try_register_name").add_attribute("tokens_used", total_cost.to_string()))
 }
 
 pub fn try_set_blocks_per_year(deps: DepsMut, info: MessageInfo, blocks_per_year: u64) -> Result<Response, ContractError> {
@@ -200,5 +293,23 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::GetOwner {}).unwrap();
         let value: OwnerResponse = from_binary(&res).unwrap();
         assert_eq!(Addr::unchecked("anyone"), value.owner);
+    }
+
+    #[test]
+    fn register_name() {
+        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+
+        let msg = INT_MSG.clone();
+        let info = mock_info("creator", &coins(1000, "earth"));
+
+        // we can just call .unwrap() to assert this was a success
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        let auth_info = mock_info("annie", &coins(200000, "ujuno"));
+        let msg = ExecuteMsg::RegisterName { name: String::from("annie") , years: 2 , avatar_url: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
+        let _res = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
+
+        print!("{:?}", _res);
     }
 }

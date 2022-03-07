@@ -18,6 +18,18 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     SetBlocksPerYear { blocks_per_year: u64 },
     SetOwner { owner: Addr },
+    RegisterName { 
+        name: String, 
+        years: u32, 
+        avatar_url: Option<String>, 
+        website: Option<String>, 
+        email: Option<String>, 
+        twitter: Option<String>, 
+        telegram: Option<String>, 
+        discord: Option<String>, 
+        instagram: Option<String>, 
+        reddit: Option<String>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
