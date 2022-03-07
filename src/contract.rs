@@ -109,6 +109,17 @@ pub fn try_register_name(
 
     let state = STATE.load(store).unwrap();
 
+    let current_time = env.block.height;
+    let existing_name = JNS.may_load(store, &name.clone())?;    // checks if the user is able to register the name
+    match existing_name {
+        Some(x) => {
+            if x.expires > current_time {
+                return Err(ContractError::Unauthorized {});
+            }
+        }
+        None => {}
+    }
+
     let mut cost = state.cost_for_6;
 
     match char_count {
@@ -140,18 +151,7 @@ pub fn try_register_name(
         return Err(ContractError::Unauthorized {});
     }
 
-    let current_time = env.block.height;
     
-
-    let existing_name = JNS.may_load(store, &name.clone())?;    // checks if the user is able to register the name
-    match existing_name {
-        Some(x) => {
-            if x.expires > current_time {
-                return Err(ContractError::Unauthorized {});
-            }
-        }
-        None => {}
-    }
 
     let expiration_date = current_time + ( state.blocks_per_year * years as u64) ; // creates the name data
     let data = Name { 
@@ -172,7 +172,12 @@ pub fn try_register_name(
 
     JNS.save(store, &name.clone(), &data)?;
 
-    Ok(Response::new().add_attribute("method", "try_register_name").add_attribute("tokens_used", total_cost.to_string()))
+    Ok(
+        Response::new().add_attribute("method", "try_register_name")
+        .add_attribute("tokens_used", total_cost.to_string())
+        .add_attribute("name_registered", name)
+        .add_attribute("data_accepted", data)
+    )
 }
 
 pub fn try_set_blocks_per_year(deps: DepsMut, info: MessageInfo, blocks_per_year: u64) -> Result<Response, ContractError> {
@@ -300,16 +305,23 @@ mod tests {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
         let msg = INT_MSG.clone();
-        let info = mock_info("creator", &coins(1000, "earth"));
+        let info = mock_info("creator", &coins(1000, "ujuno"));
 
         // we can just call .unwrap() to assert this was a success
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(0, res.messages.len());
 
         let auth_info = mock_info("annie", &coins(200000, "ujuno"));
-        let msg = ExecuteMsg::RegisterName { name: String::from("annie") , years: 2 , avatar_url: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
-        let _res = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
+        let msg = ExecuteMsg::RegisterName { name: String::from("testname") , years: 2 , avatar_url: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
+        let res1 = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
 
-        print!("{:?}", _res);
+        let auth_info = mock_info("bobby", &coins(200000, "ujuno"));
+        let msg = ExecuteMsg::RegisterName { name: String::from("testname") , years: 3 , avatar_url: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
+        let res2 = execute(deps.as_mut(), mock_env(), auth_info, msg);
+        
+        assert_eq!(res2.is_err(), true);
+
+        println!("{:?}", res1);
+        println!("{:?}", res2);
     }
 }

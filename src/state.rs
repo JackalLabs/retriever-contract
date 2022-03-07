@@ -39,6 +39,18 @@ pub struct Name {
     pub reddit: Option<String>
 }
 
+impl std::fmt::Display for Name {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Name (id: {}, expires: {}, owner: {}, avatar_url: {:?}, website: {:?}, email: {:?}, twitter: {:?}, telegram: {:?}, discord: {:?}, instagram: {:?}, reddit: {:?})", self.id, self.expires, self.owner, self.avatar_url, self.website, self.email, self.twitter, self.telegram, self.discord, self.instagram, self.reddit)
+    }
+}
+
+impl Into<String> for Name {
+    fn into(self: Name) -> String {
+        format!("Name (id: {}, expires: {}, owner: {}, avatar_url: {:?}, website: {:?}, email: {:?}, twitter: {:?}, telegram: {:?}, discord: {:?}, instagram: {:?}, reddit: {:?})", self.id, self.expires, self.owner, self.avatar_url, self.website, self.email, self.twitter, self.telegram, self.discord, self.instagram, self.reddit)
+    }
+}
+
 pub const STATE: Item<State> = Item::new("state");
 pub const JNS: Map<&str, Name> = Map::new("jns");
 
