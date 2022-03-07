@@ -30,6 +30,7 @@ pub enum ExecuteMsg {
         instagram: Option<String>, 
         reddit: Option<String>,
     },
+    AddTime { name : String, years: u32},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -37,6 +38,7 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     GetOwner {},
     GetBlocksPerYear {},
+    ResolveName { name : String },
 }
 
 // Blocks Per Year response

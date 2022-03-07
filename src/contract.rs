@@ -81,8 +81,75 @@ pub fn execute(
         ExecuteMsg::SetBlocksPerYear { blocks_per_year} => try_set_blocks_per_year(deps, info, blocks_per_year),
         ExecuteMsg::SetOwner { owner } => try_set_owner(deps, info, owner),
         ExecuteMsg::RegisterName { name, years , avatar_url, website, email, twitter, telegram, discord, instagram, reddit} => try_register_name(deps, env, info, name, years, avatar_url, website, email, twitter, telegram, discord, instagram, reddit),
+        ExecuteMsg::AddTime { name, years} => try_add_time(deps, env, info, name, years),
 
     }
+}
+
+pub fn try_add_time(
+    deps: DepsMut, 
+    env: Env, 
+    info: MessageInfo, 
+    name: String, 
+    years: u32
+)-> Result<Response, ContractError> {
+    let store = deps.storage;
+
+    let existing_name = JNS.may_load(store, &name.clone())?;    // checks if the user is able to register the name
+    if existing_name == None {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let mut real_name = existing_name.unwrap();
+
+    if real_name.owner != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let char_count = name.chars().count();
+
+    let state = STATE.load(store).unwrap();
+    let mut cost = state.cost_for_6;
+
+    match char_count {
+        1 => {
+            cost = state.cost_for_1;
+        },
+        2 => {
+            cost = state.cost_for_2;
+        },
+        3 => {
+            cost = state.cost_for_3;
+        },
+        4 => {
+            cost = state.cost_for_4;
+        },
+        5 => {
+            cost = state.cost_for_5;
+        },
+        _ => {
+            cost = state.cost_for_6;
+        }
+    }
+
+    let total_cost = cost * years;
+
+    let funds = NativeBalance(info.funds);
+    let passes = funds.has(&Coin {denom: String::from("ujuno"), amount: Uint128::from(total_cost)});
+    if !passes {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    real_name.expires = real_name.expires + ( state.blocks_per_year * years as u64 );
+
+    JNS.save(store, &name.clone(), &real_name)?;
+
+    Ok(
+        Response::new().add_attribute("method", "try_register_name")
+        .add_attribute("tokens_used", total_cost.to_string())
+        .add_attribute("name_registered", name)
+        .add_attribute("data_accepted", real_name)
+    )
 }
 
 pub fn try_register_name(
@@ -207,6 +274,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetBlocksPerYear {} => to_binary(&query_blocks_per_year(deps)?),
         QueryMsg::GetOwner {} => to_binary(&query_owner(deps)?),
+        QueryMsg::ResolveName { name } => to_binary(&query_name_owner(deps, name)?),
     }
 }
 
@@ -218,6 +286,17 @@ fn query_blocks_per_year(deps: Deps) -> StdResult<BlocksResponse> {
 fn query_owner(deps: Deps) -> StdResult<OwnerResponse> {
     let state = STATE.load(deps.storage)?;
     Ok(OwnerResponse { owner: state.owner })
+}
+
+fn query_name_owner(deps: Deps, name: String) -> StdResult<OwnerResponse> {
+    let exists = JNS.may_load(deps.storage, &name);
+    if exists.is_err() {
+        return Err(StdError::NotFound { kind: "Name is not registered.".to_string()});
+    }
+
+    let ret_name = JNS.load(deps.storage, &name)?;
+
+    Ok(OwnerResponse { owner: ret_name.owner })
 }
 
 #[cfg(test)]
@@ -323,5 +402,34 @@ mod tests {
 
         println!("{:?}", res1);
         println!("{:?}", res2);
+    }
+
+    #[test]
+    fn add_time_to_name() {
+        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+
+        let msg = INT_MSG.clone();
+        let info = mock_info("creator", &coins(1000, "ujuno"));
+
+        // we can just call .unwrap() to assert this was a success
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        let auth_info = mock_info("annie", &coins(200000, "ujuno"));
+        let msg = ExecuteMsg::RegisterName { name: String::from("testname") , years: 2 , avatar_url: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
+        let res1 = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
+
+        let auth_info = mock_info("annie", &coins(200000, "ujuno"));
+        let msg = ExecuteMsg::AddTime { name: String::from("testname") , years: 2 };
+        let res2 = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
+
+        let auth_info = mock_info("bobby", &coins(200000, "ujuno"));
+        let msg = ExecuteMsg::AddTime { name: String::from("testname") , years: 2 };
+        let res3 = execute(deps.as_mut(), mock_env(), auth_info, msg);
+        assert_eq!(res3.is_err(), true);
+        
+        println!("{:?}", res1);
+        println!("{:?}", res2);
+        println!("{:?}", res3);
     }
 }
