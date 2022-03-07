@@ -5,7 +5,7 @@ use cw2::set_contract_version;
 use cw_utils::{ NativeBalance };
 
 use crate::error::ContractError;
-use crate::msg::{OwnerResponse, BlocksResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{OwnerResponse, BlocksResponse, NameResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{State, STATE, JNS, Name};
 
 // version info for migration info
@@ -82,6 +82,7 @@ pub fn execute(
         ExecuteMsg::SetOwner { owner } => try_set_owner(deps, info, owner),
         ExecuteMsg::RegisterName { name, years , avatar_url, website, email, twitter, telegram, discord, instagram, reddit} => try_register_name(deps, env, info, name, years, avatar_url, website, email, twitter, telegram, discord, instagram, reddit),
         ExecuteMsg::AddTime { name, years} => try_add_time(deps, env, info, name, years),
+        ExecuteMsg::UpdateParams { name, avatar_url, website, email, twitter, telegram, discord, instagram, reddit} => try_update_name(deps, env, info, name, avatar_url, website, email, twitter, telegram, discord, instagram, reddit),
 
     }
 }
@@ -149,6 +150,67 @@ pub fn try_add_time(
         .add_attribute("tokens_used", total_cost.to_string())
         .add_attribute("name_registered", name)
         .add_attribute("data_accepted", real_name)
+    )
+}
+pub fn try_update_name(
+    deps: DepsMut, 
+    env: Env, 
+    info: MessageInfo, 
+    name: String, 
+    avatar_url: Option<String>, 
+    website: Option<String>, 
+    email: Option<String>,
+    twitter: Option<String>, 
+    telegram: Option<String>, 
+    discord: Option<String>, 
+    instagram: Option<String>, 
+    reddit: Option<String>
+) -> Result<Response, ContractError> {
+
+    // load and save with extra key argument
+    let store = deps.storage;
+
+    let current_time = env.block.height;
+    let existing_name = JNS.may_load(store, &name.clone());    // checks if the user is able to register the name
+    if existing_name.is_err() {
+        return Err(ContractError::Std(StdError::not_found("Name not register.")));
+    }
+
+    let existing_name = existing_name.unwrap().unwrap();
+
+    if existing_name.expires < current_time {
+        return Err(ContractError::Std(StdError::not_found("Name not register.")));
+    }
+
+    if existing_name.owner != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+
+
+
+    let data = Name { 
+        id: existing_name.id, 
+        expires: existing_name.expires, 
+        owner: existing_name.owner, 
+        avatar_url: avatar_url, 
+        website: website, 
+        email: email, 
+        twitter: twitter, 
+        telegram: telegram, 
+        discord: discord, 
+        instagram: instagram, 
+        reddit: reddit 
+    };
+
+    
+
+    JNS.save(store, &name.clone(), &data)?;
+
+    Ok(
+        Response::new().add_attribute("method", "try_register_name")
+        .add_attribute("name_updated", name)
+        .add_attribute("data_accepted", data)
     )
 }
 
@@ -275,6 +337,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::GetBlocksPerYear {} => to_binary(&query_blocks_per_year(deps)?),
         QueryMsg::GetOwner {} => to_binary(&query_owner(deps)?),
         QueryMsg::ResolveName { name } => to_binary(&query_name_owner(deps, env, name)?),
+        QueryMsg::ResolveAttributes { name } => to_binary(&query_name_attributes(deps, env, name)?),
+
     }
 }
 
@@ -286,6 +350,21 @@ fn query_blocks_per_year(deps: Deps) -> StdResult<BlocksResponse> {
 fn query_owner(deps: Deps) -> StdResult<OwnerResponse> {
     let state = STATE.load(deps.storage)?;
     Ok(OwnerResponse { owner: state.owner })
+}
+
+fn query_name_attributes(deps: Deps, env: Env, name: String) -> StdResult<NameResponse> {
+    let exists = JNS.may_load(deps.storage, &name);
+    if exists.is_err() {
+        return Err(StdError::NotFound { kind: "Name is not registered.".to_string()});
+    }
+
+    let ret_name = exists.unwrap().unwrap();
+
+    if ret_name.expires <= env.block.height {
+        return Err(StdError::NotFound { kind: "Name is not registered.".to_string()});
+    }
+
+    Ok(NameResponse { name: ret_name })
 }
 
 fn query_name_owner(deps: Deps, env: Env, name: String) -> StdResult<OwnerResponse> {

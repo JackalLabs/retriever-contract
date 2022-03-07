@@ -1,6 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use cosmwasm_std::Addr;
+use crate::state::Name;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -31,6 +32,17 @@ pub enum ExecuteMsg {
         reddit: Option<String>,
     },
     AddTime { name : String, years: u32},
+    UpdateParams { 
+        name: String, 
+        avatar_url: Option<String>, 
+        website: Option<String>, 
+        email: Option<String>, 
+        twitter: Option<String>, 
+        telegram: Option<String>, 
+        discord: Option<String>, 
+        instagram: Option<String>, 
+        reddit: Option<String>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -39,6 +51,7 @@ pub enum QueryMsg {
     GetOwner {},
     GetBlocksPerYear {},
     ResolveName { name : String },
+    ResolveAttributes { name : String },
 }
 
 // Blocks Per Year response
@@ -51,4 +64,11 @@ pub struct BlocksResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OwnerResponse {
     pub owner: Addr,
+}
+
+
+// Name Response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct NameResponse {
+    pub name: Name,
 }

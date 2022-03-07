@@ -43,6 +43,174 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "register_name"
+      ],
+      "properties": {
+        "register_name": {
+          "type": "object",
+          "required": [
+            "name",
+            "years"
+          ],
+          "properties": {
+            "avatar_url": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "discord": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "email": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "instagram": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "reddit": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "telegram": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "twitter": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "website": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "years": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "add_time"
+      ],
+      "properties": {
+        "add_time": {
+          "type": "object",
+          "required": [
+            "name",
+            "years"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "years": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "update_params"
+      ],
+      "properties": {
+        "update_params": {
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "avatar_url": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "discord": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "email": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "instagram": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "reddit": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "telegram": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "twitter": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "website": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
     }
   ],
   "definitions": {
