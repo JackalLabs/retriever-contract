@@ -1,8 +1,17 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::Addr;
+use cosmwasm_std::{ Addr, CanonicalAddr } ;
 use cw_storage_plus::{Item, Map};
+use cw_utils::Expiration;
+use cosmwasm_storage::{
+    bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
+    Singleton,
+};
+use cosmwasm_std::{StdResult, Storage};
+
+
+pub const OPERATOR_PREFIX: &[u8] = b"operators";
 
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -19,12 +28,24 @@ pub struct State {
     pub cost_for_1: u32
 }
 
+
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct Approval {
+    /// Account that can transfer/send the token
+    pub spender: CanonicalAddr,
+    /// When the Approval expires (maybe Expiration::never)
+    pub expires: Expiration,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Name {
 
     pub id: String,                 // the name itself
     pub expires: u64,               // the block number for which the name expires
     pub owner: Addr,                // the address that owns the name
+
+    pub approvals: Vec<Approval>,   // NFT stuff
 
     // a URL to an avatar image to be assocaited with the name
     pub avatar_url: Option<String>, 
@@ -51,6 +72,9 @@ impl Into<String> for Name {
     }
 }
 
+pub const OPERATORS: Map<String, Expiration> = Map::new("operators");
+
 pub const STATE: Item<State> = Item::new("state");
+
 pub const JNS: Map<&str, Name> = Map::new("jns");
 

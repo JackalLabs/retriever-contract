@@ -1,12 +1,15 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr, Coin, Uint128, StdError};
+use cosmwasm_std::{from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr, Coin, Uint128, StdError, CosmosMsg, QueryResponse};
 use cw2::set_contract_version;
 use cw_utils::{ NativeBalance };
 
 use crate::error::ContractError;
 use crate::msg::{OwnerResponse, BlocksResponse, NameResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{State, STATE, JNS, Name};
+use crate::state::{State, OPERATORS, STATE, JNS, Name, Approval};
+
+use cw_utils::Expiration;
+
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ibc_name_service";
@@ -83,9 +86,232 @@ pub fn execute(
         ExecuteMsg::RegisterName { name, years , avatar_url, website, email, twitter, telegram, discord, instagram, reddit} => try_register_name(deps, env, info, name, years, avatar_url, website, email, twitter, telegram, discord, instagram, reddit),
         ExecuteMsg::AddTime { name, years} => try_add_time(deps, env, info, name, years),
         ExecuteMsg::UpdateParams { name, avatar_url, website, email, twitter, telegram, discord, instagram, reddit} => try_update_name(deps, env, info, name, avatar_url, website, email, twitter, telegram, discord, instagram, reddit),
+        ExecuteMsg::TransferNft {recipient, token_id} => transfer_nft (deps, env, info, recipient, token_id),
+        ExecuteMsg::SendNft {contract, token_id, message} => try_send_nft (deps, env, info, contract, token_id, message),
+        ExecuteMsg::Approve {spender, token_id, expires} => handle_approve (deps, env, info, spender, token_id, expires),
+        ExecuteMsg::Revoke {spender, token_id} => handle_revoke (deps, env, info, spender, token_id),
+        ExecuteMsg::ApproveAll {operator, expires} => handle_approve_all (deps, env, info, operator, expires),
+        ExecuteMsg::RevokeAll {operator} => handle_revoke_all (deps, env, info, operator),
+
 
     }
 }
+
+pub fn handle_approve_all(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    operator: String,
+    expires: Option<Expiration>,
+) -> Result<Response, ContractError> {
+
+    let expires = expires.unwrap_or_default();
+
+    if expires.is_expired(&env.block) {
+        return Err(ContractError::Std(StdError::generic_err(
+            "Cannot set approval that is already expired",
+        )));
+    }
+
+
+    OPERATORS.save(deps.storage, operator.clone(), &expires)?;
+
+
+    Ok(Response::new().add_attribute("action", "approve_all").add_attribute("sender", info.sender).add_attribute("operator", operator))
+}
+
+pub fn handle_revoke_all(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    operator: String,
+) -> Result<Response, ContractError> {
+
+    OPERATORS.remove(deps.storage, operator.clone());
+
+
+    Ok(Response::new().add_attribute("action", "approve_all").add_attribute("sender", info.sender).add_attribute("operator", operator))
+}
+
+pub fn handle_revoke(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    spender: String,
+    token_id: String,
+) -> Result<Response, ContractError> {
+
+    let approve = _update_approvals(deps, env, info.sender.to_string(), spender.clone(), token_id.clone(), false, None);
+
+    if approve.is_err() {
+        return Err(ContractError::Std(StdError::generic_err(approve.unwrap_err().to_string())));
+    }
+
+    Ok(Response::new().add_attribute("action", "revoke").add_attribute("sender", info.sender).add_attribute("spender", spender).add_attribute("token_id", token_id))
+}
+
+pub fn handle_approve(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    spender: String,
+    token_id: String,
+    expires: Option<Expiration>,
+) -> Result<Response, ContractError> {
+
+    let approve = _update_approvals(deps, env, info.sender.to_string(), spender.clone(), token_id.clone(), true, expires);
+
+    if approve.is_err() {
+        return Err(ContractError::Std(StdError::generic_err(approve.unwrap_err().to_string())));
+    }
+
+    Ok(Response::new().add_attribute("action", "approve").add_attribute("sender", info.sender).add_attribute("spender", spender).add_attribute("token_id", token_id))
+}
+
+pub fn _update_approvals(
+    deps: DepsMut,
+    env: Env,
+    sender: String,
+    spender: String,
+    token_id: String,
+    add: bool,
+    expires: Option<Expiration>,
+) -> Result<NameResponse, ContractError> {
+    let mut token = JNS.may_load(deps.storage, &token_id);
+
+    if token.is_err() {
+        return Err(ContractError::Std(StdError::generic_err(token.unwrap_err().to_string())));
+    }
+
+    let mut token = token.unwrap().unwrap();
+
+    if token.owner != sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+
+    // update the approval list (remove any for the same spender before adding)
+    let spender_raw = deps.api.addr_canonicalize(&spender)?;
+
+    token.approvals = token
+        .approvals
+        .into_iter()
+        .filter(|apr| apr.spender != spender_raw)
+        .collect();
+
+    // only difference between approve and revoke
+    if add {
+        // reject expired data as invalid
+        let expires = expires.unwrap_or_default();
+        if expires.is_expired(&env.block) {
+            return Err(ContractError::Std(StdError::generic_err(
+                "Cannot set approval that is already expired",
+            )));
+        };
+        let approval = Approval {
+            spender: spender_raw,
+            expires,
+        };
+        token.approvals.push(approval);
+    }
+
+    JNS.save(deps.storage, &token_id, &token)?;
+
+    Ok(NameResponse { name: token })
+}
+
+pub fn try_send_nft (
+    deps: DepsMut, 
+    env: Env, 
+    info: MessageInfo, 
+    contract: String,
+    token_id: String,
+    msg: Binary
+) -> Result<Response, ContractError> {
+    
+    // Unwrap message first
+    let msgs: Vec<CosmosMsg> = vec![from_binary(&msg)?];
+
+    // Transfer token
+    let res = _try_transfer_nft(deps, env, info.clone(), contract.clone(), token_id.clone());
+
+    if res.is_err() {
+        return Err(ContractError::Std(StdError::generic_err(res.unwrap_err().to_string())));
+    }
+
+    // Send message
+    Ok(Response::new().add_attribute("action", "send_nft").add_attribute("sender", info.sender).add_attribute("recipient", contract).add_attribute("token_id", token_id))
+
+}
+
+pub fn transfer_nft (
+    deps: DepsMut, 
+    env: Env, 
+    info: MessageInfo, 
+    recipient: String,
+    token_id: String
+) -> Result<Response, ContractError> {
+    
+    _try_transfer_nft(deps, env, info, recipient.clone(), token_id.clone())?;
+
+    Ok(
+        Response::new().add_attribute("method", "try_transfer_nft")
+        .add_attribute("name_transfered", token_id)
+        .add_attribute("new_owner", recipient)
+    )
+}
+
+pub fn _try_transfer_nft (
+    deps: DepsMut, 
+    _env: Env, 
+    info: MessageInfo, 
+    recipient: String,
+    token_id: String
+) -> Result<Response, ContractError> {
+    let store = deps.storage;
+    let existing_name = JNS.may_load(store, &token_id.clone())?;    // checks if the user is able to register the name
+    if existing_name == None {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let mut real_name = existing_name.unwrap();
+
+    if real_name.owner != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let checked= deps.api.addr_validate(&recipient);
+
+    if checked.is_err() {
+        return Err(ContractError::Std(StdError::generic_err("Recipient is not a valid address.")));
+    }
+
+    let address = checked.unwrap();
+    
+    let new_name = Name {
+        id: real_name.id,
+        expires: real_name.expires,
+        owner: address.clone(),
+        approvals: vec![],
+        avatar_url: None,
+        website: None,
+        email: None,
+        twitter: None,
+        telegram: None,
+        discord: None,
+        instagram: None,
+        reddit: None
+    };
+
+    JNS.save(store, &token_id.clone(), &new_name)?;
+
+    Ok(
+        Response::new().add_attribute("method", "try_transfer_nft")
+        .add_attribute("name_transfered", token_id)
+        .add_attribute("new_owner", address.to_string())
+    )
+}
+
 
 pub fn try_add_time(
     deps: DepsMut, 
@@ -193,6 +419,7 @@ pub fn try_update_name(
         id: existing_name.id, 
         expires: existing_name.expires, 
         owner: existing_name.owner, 
+        approvals: vec![],
         avatar_url: avatar_url, 
         website: website, 
         email: email, 
@@ -287,6 +514,7 @@ pub fn try_register_name(
         id: name.clone(), 
         expires: expiration_date, 
         owner: info.sender, 
+        approvals: vec![],
         avatar_url: avatar_url, 
         website: website, 
         email: email, 
@@ -514,5 +742,49 @@ mod tests {
         println!("{:?}", res1);
         println!("{:?}", res2);
         println!("{:?}", res3);
+    }
+
+    #[test]
+    fn resolve_name() {
+        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+
+        let msg = INT_MSG.clone();
+        let info = mock_info("creator", &coins(1000, "ujuno"));
+
+        // we can just call .unwrap() to assert this was a success
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        let auth_info = mock_info("annie", &coins(200000, "ujuno"));
+        let msg = ExecuteMsg::RegisterName { name: String::from("testname") , years: 2 , avatar_url: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
+        let _res = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
+
+        
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::ResolveName { name : String::from("testname")}).unwrap();
+        let value: OwnerResponse = from_binary(&res).unwrap();
+        assert_eq!(Addr::unchecked("annie"), value.owner);
+
+    }
+
+    #[test]
+    fn request_name() {
+        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+
+        let msg = INT_MSG.clone();
+        let info = mock_info("creator", &coins(1000, "ujuno"));
+
+        // we can just call .unwrap() to assert this was a success
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        let auth_info = mock_info("annie", &coins(200000, "ujuno"));
+        let msg = ExecuteMsg::RegisterName { name: String::from("testname") , years: 2 , avatar_url: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
+        let _res = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
+
+        
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::ResolveAttributes { name : String::from("testname")}).unwrap();
+        let value: NameResponse = from_binary(&res).unwrap();
+        assert_eq!(Name {id: String::from("testname") , expires: 10108531 , owner: Addr::unchecked("annie"), approvals: vec![], avatar_url: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None}, value.name);
+
     }
 }

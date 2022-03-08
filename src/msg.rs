@@ -3,6 +3,10 @@ use serde::{Deserialize, Serialize};
 use cosmwasm_std::Addr;
 use crate::state::Name;
 
+//REQUIRED BY CW721
+use cw_utils::Expiration;
+use cosmwasm_std::Binary;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub blocks_per_year: u64,
@@ -43,6 +47,35 @@ pub enum ExecuteMsg {
         instagram: Option<String>, 
         reddit: Option<String>,
     },
+
+    /**
+     * ALL THE CW721 STANDARD FUNCTIONS
+     */
+    TransferNft { recipient: String, token_id: String },
+    /// Send is a base message to transfer a token to a contract and trigger an action
+    /// on the receiving contract.
+    SendNft {
+        contract: String,
+        token_id: String,
+        message: Binary,
+    },
+    /// Allows operator to transfer / send the token from the owner's account.
+    /// If expiration is set, then this allowance has a time/height limit
+    Approve {
+        spender: String,
+        token_id: String,
+        expires: Option<Expiration>,
+    },
+    /// Remove previously granted Approval
+    Revoke { spender: String, token_id: String },
+    /// Allows operator to transfer / send any token from the owner's account.
+    /// If expiration is set, then this allowance has a time/height limit
+    ApproveAll {
+        operator: String,
+        expires: Option<Expiration>,
+    },
+    /// Remove previously granted ApproveAll permission
+    RevokeAll { operator: String },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
