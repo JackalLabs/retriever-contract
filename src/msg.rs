@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use cosmwasm_std::Addr;
-use crate::state::Name;
+use crate::state::{ Name, Operator } ;
 
 //REQUIRED BY CW721
 use cw_utils::Expiration;
@@ -10,6 +10,7 @@ use cosmwasm_std::Binary;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub blocks_per_year: u64,
+    pub meta_url: String,
     pub cost_for_6: Option<u32>,
     pub cost_for_5: Option<u32>,
     pub cost_for_4: Option<u32>,
@@ -85,6 +86,21 @@ pub enum QueryMsg {
     GetBlocksPerYear {},
     ResolveName { name : String },
     ResolveAttributes { name : String },
+    OwnerOf {
+        token_id: String,
+    },
+    /// List all operators that can access all of the owner's tokens
+    /// Return type: `ApprovedForAllResponse`
+    ApprovedForAll {
+        owner: String,
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
+    NumTokens {},
+    ContractInfo {},
+    NftInfo {
+        token_id: String,
+    },
 }
 
 // Blocks Per Year response
@@ -104,4 +120,30 @@ pub struct OwnerResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct NameResponse {
     pub name: Name,
+}
+
+// Name Response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct ApprovedForAllResponse {
+    pub operators: Vec<Operator>,
+}
+
+// Name Response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct NumTokensResponse {
+    pub tokens: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+
+pub struct ContractInfoResponse {
+    pub name: String,
+    pub symbol: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct NftInfoResponse {
+    pub name: String,
+    pub description: String,
+    pub image: String,
 }

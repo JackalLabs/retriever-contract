@@ -1,15 +1,14 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr, Coin, Uint128, StdError, CosmosMsg, QueryResponse};
+use cosmwasm_std::{from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr, Coin, Uint128, StdError, CosmosMsg, CanonicalAddr};
 use cw2::set_contract_version;
 use cw_utils::{ NativeBalance };
 
 use crate::error::ContractError;
-use crate::msg::{OwnerResponse, BlocksResponse, NameResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{State, OPERATORS, STATE, JNS, Name, Approval};
+use crate::msg::{NftInfoResponse, ContractInfoResponse, NumTokensResponse, ApprovedForAllResponse, OwnerResponse, BlocksResponse, NameResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::state::{State, OPERATORS, Operator, STATE, JNS, Name, Approval};
 
 use cw_utils::Expiration;
-
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ibc_name_service";
@@ -25,6 +24,7 @@ pub fn instantiate(
     let state = State {
         blocks_per_year: msg.blocks_per_year,
         owner: info.sender.clone(),
+        meta_url: msg.meta_url.to_string(),
 
         //prices to register per character count
         cost_for_6: {
@@ -113,8 +113,14 @@ pub fn handle_approve_all(
         )));
     }
 
+    let op = Operator {
+        owner: operator.clone(),
+        expires: expires,
+    };
 
-    OPERATORS.save(deps.storage, operator.clone(), &expires)?;
+    let mut ops = OPERATORS.load(deps.storage, info.sender.to_string()).unwrap_or(vec![]);
+    ops.push(op);
+    OPERATORS.save(deps.storage, info.sender.to_string(), &ops)?;
 
 
     Ok(Response::new().add_attribute("action", "approve_all").add_attribute("sender", info.sender).add_attribute("operator", operator))
@@ -122,12 +128,12 @@ pub fn handle_approve_all(
 
 pub fn handle_revoke_all(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     operator: String,
 ) -> Result<Response, ContractError> {
 
-    OPERATORS.remove(deps.storage, operator.clone());
+    OPERATORS.remove(deps.storage, info.sender.to_string());
 
 
     Ok(Response::new().add_attribute("action", "approve_all").add_attribute("sender", info.sender).add_attribute("operator", operator))
@@ -177,7 +183,7 @@ pub fn _update_approvals(
     add: bool,
     expires: Option<Expiration>,
 ) -> Result<NameResponse, ContractError> {
-    let mut token = JNS.may_load(deps.storage, &token_id);
+    let token = JNS.may_load(deps.storage, &token_id);
 
     if token.is_err() {
         return Err(ContractError::Std(StdError::generic_err(token.unwrap_err().to_string())));
@@ -230,7 +236,7 @@ pub fn try_send_nft (
 ) -> Result<Response, ContractError> {
     
     // Unwrap message first
-    let msgs: Vec<CosmosMsg> = vec![from_binary(&msg)?];
+    let _msgs: Vec<CosmosMsg> = vec![from_binary(&msg)?];
 
     // Transfer token
     let res = _try_transfer_nft(deps, env, info.clone(), contract.clone(), token_id.clone());
@@ -261,26 +267,69 @@ pub fn transfer_nft (
     )
 }
 
+fn check_can_send(
+    op: Vec<Operator>,
+    sraw: CanonicalAddr,
+    sender_raw: &Addr,
+    env: &Env,
+    _info: &MessageInfo,
+    token: Name,
+) -> Result<(), ContractError> {
+    // owner can send
+
+    if &token.owner == sender_raw {
+        return Ok(());
+    }
+
+
+    // any non-expired token approval can send
+    if token
+        .approvals
+        .iter()
+        .any(|apr| apr.spender == sraw && !apr.expires.is_expired(&env.block))
+    {
+        return Ok(());
+    }
+
+    // operator can send
+    for o in op {
+        if &o.owner == sender_raw {
+            if !o.expires.is_expired(&env.block) {
+                return Ok(());
+            }
+        }
+    }
+
+    Err(ContractError::Unauthorized {})
+    
+}
+
 pub fn _try_transfer_nft (
     deps: DepsMut, 
-    _env: Env, 
+    env: Env, 
     info: MessageInfo, 
     recipient: String,
     token_id: String
 ) -> Result<Response, ContractError> {
+
     let store = deps.storage;
     let existing_name = JNS.may_load(store, &token_id.clone())?;    // checks if the user is able to register the name
     if existing_name == None {
-        return Err(ContractError::Unauthorized {});
+        return Err(ContractError::Std(StdError::not_found("Name not registered.")));
     }
 
-    let mut real_name = existing_name.unwrap();
-
-    if real_name.owner != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
-
+    let real_name = existing_name.unwrap();
     let checked= deps.api.addr_validate(&recipient);
+
+    let sender_raw = &info.sender;
+    let sraw = deps.api.addr_canonicalize(&sender_raw.to_string())?;
+    let op = OPERATORS.may_load(store, real_name.owner.to_string())?;
+
+    let r = check_can_send(op.unwrap_or(vec![]), sraw, sender_raw, &env, &info, real_name.clone());
+
+    if r.is_err() {
+        return Err(ContractError::Unauthorized{});
+    }
 
     if checked.is_err() {
         return Err(ContractError::Std(StdError::generic_err("Recipient is not a valid address.")));
@@ -566,8 +615,64 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::GetOwner {} => to_binary(&query_owner(deps)?),
         QueryMsg::ResolveName { name } => to_binary(&query_name_owner(deps, env, name)?),
         QueryMsg::ResolveAttributes { name } => to_binary(&query_name_attributes(deps, env, name)?),
-
+        QueryMsg::OwnerOf { token_id } => to_binary(&query_name_owner(deps, env, token_id)?),
+        QueryMsg::ApprovedForAll {
+            owner,
+            start_after,
+            limit,
+        } => to_binary(&query_all_approvals(deps, owner, start_after, limit)?),
+        QueryMsg::NumTokens {} => to_binary(&query_num_tokens()?),
+        QueryMsg::ContractInfo {} => to_binary(&query_contract_info()?),
+        QueryMsg::NftInfo { token_id } => to_binary(&query_nft_info(deps, env, token_id)?),
     }
+}
+
+fn query_nft_info( deps: Deps, env:Env, token_id: String ) -> StdResult<NftInfoResponse> {
+
+    let exists = JNS.may_load(deps.storage, &token_id);
+    if exists.is_err() {
+        return Err(StdError::NotFound { kind: "Name is not registered.".to_string()});
+    }
+
+    let ret_name = exists.unwrap().unwrap();
+
+    if ret_name.expires <= env.block.height {
+        return Err(StdError::NotFound { kind: "Name is not registered.".to_string()});
+    }
+
+    let state = STATE.load(deps.storage)?;
+
+
+    Ok(NftInfoResponse {
+        name: token_id.clone(),
+        description: "".to_string(),
+        image: format!("{}/{}", state.meta_url, token_id),
+    })
+} 
+
+
+fn query_contract_info() -> StdResult<ContractInfoResponse> {
+    Ok(ContractInfoResponse {
+        name: "JACKAL Name Service".to_string(),
+        symbol: "RNS".to_string(),
+    })
+} 
+
+fn query_num_tokens() -> StdResult<NumTokensResponse> {
+    Ok(NumTokensResponse {tokens: 0})
+} 
+
+fn query_all_approvals(
+    deps: Deps,
+    owner: String,
+    _start_after: Option<String>,
+    _limit: Option<u32>,
+) -> StdResult<ApprovedForAllResponse> {
+    
+    let ops = OPERATORS.load(deps.storage, owner).unwrap_or(vec![]);
+
+    Ok(ApprovedForAllResponse {operators: ops})
+
 }
 
 fn query_blocks_per_year(deps: Deps) -> StdResult<BlocksResponse> {
@@ -616,21 +721,27 @@ mod tests {
     use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
     use cosmwasm_std::{coins, from_binary};
 
-    const INT_MSG: InstantiateMsg = InstantiateMsg { 
-        blocks_per_year: 5048093, 
-        cost_for_6: Some(1), 
-        cost_for_5: Some(2), 
-        cost_for_4: Some(4), 
-        cost_for_3: Some(8), 
-        cost_for_2: Some(16), 
-        cost_for_1: Some(32),
-    };
+    
+
+    fn int_mgs() -> InstantiateMsg{
+
+        InstantiateMsg { 
+            blocks_per_year: 5048093, 
+            meta_url: "example.com".to_string(),
+            cost_for_6: Some(1), 
+            cost_for_5: Some(2), 
+            cost_for_4: Some(4), 
+            cost_for_3: Some(8), 
+            cost_for_2: Some(16), 
+            cost_for_1: Some(32),
+        }
+    }
 
     #[test]
     fn proper_initialization() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
-        let msg = INT_MSG.clone();
+        let msg = int_mgs();
         let info = mock_info("creator", &coins(1000, "earth"));
 
         // we can just call .unwrap() to assert this was a success
@@ -647,7 +758,7 @@ mod tests {
     fn change_block_count() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
-        let msg = INT_MSG.clone();
+        let msg = int_mgs();
         let info = mock_info("creator", &coins(2, "token"));
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
@@ -666,7 +777,7 @@ mod tests {
     fn change_owner() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
-        let msg = INT_MSG.clone();
+        let msg = int_mgs();
         let info = mock_info("creator", &coins(2, "token"));
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
@@ -694,7 +805,7 @@ mod tests {
     fn register_name() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
-        let msg = INT_MSG.clone();
+        let msg = int_mgs();
         let info = mock_info("creator", &coins(1000, "ujuno"));
 
         // we can just call .unwrap() to assert this was a success
@@ -719,7 +830,7 @@ mod tests {
     fn add_time_to_name() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
-        let msg = INT_MSG.clone();
+        let msg = int_mgs();
         let info = mock_info("creator", &coins(1000, "ujuno"));
 
         // we can just call .unwrap() to assert this was a success
@@ -748,7 +859,7 @@ mod tests {
     fn resolve_name() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
-        let msg = INT_MSG.clone();
+        let msg = int_mgs();
         let info = mock_info("creator", &coins(1000, "ujuno"));
 
         // we can just call .unwrap() to assert this was a success
@@ -770,7 +881,7 @@ mod tests {
     fn request_name() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
-        let msg = INT_MSG.clone();
+        let msg = int_mgs();
         let info = mock_info("creator", &coins(1000, "ujuno"));
 
         // we can just call .unwrap() to assert this was a success
@@ -787,4 +898,99 @@ mod tests {
         assert_eq!(Name {id: String::from("testname") , expires: 10108531 , owner: Addr::unchecked("annie"), approvals: vec![], avatar_url: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None}, value.name);
 
     }
+
+    #[test]
+    fn transferring_nft() {
+        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+
+        let msg = int_mgs();
+        let info = mock_info("creator", &coins(1000, "ujuno"));
+
+        // we can just call .unwrap() to assert this was a success
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        // Mint a token
+        let token_id = "melt".to_string();
+
+        let auth_info = mock_info("annie", &coins(200000, "ujuno"));
+        let msg = ExecuteMsg::RegisterName { name: token_id.clone() , years: 2 , avatar_url: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
+        let _res1 = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
+
+        // random cannot transfer
+        let random = mock_info("bobby", &coins(200000, "ujuno"));
+        let transfer_msg = ExecuteMsg::TransferNft {
+            recipient: "random".into(),
+            token_id: token_id.clone(),
+        };
+
+        let _err = execute(deps.as_mut(), mock_env(), random, transfer_msg.clone()).unwrap_err();
+
+
+        // owner can
+        let success = mock_info("annie", &coins(200000, "ujuno"));
+        let transfer_msg = ExecuteMsg::TransferNft {
+            recipient: "random".into(),
+            token_id: token_id.clone(),
+        };
+
+        let res = execute(deps.as_mut(), mock_env(), success, transfer_msg.clone());
+
+        assert_eq!(res.is_err(), false);
+    }
+
+
+    #[test]
+    fn approving_revoking() {
+        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+
+        let msg = int_mgs();
+        let info = mock_info("creator", &coins(1000, "ujuno"));
+
+        // we can just call .unwrap() to assert this was a success
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        // Mint a token
+        let token_id = "melt".to_string();
+
+        let auth_info = mock_info("annie", &coins(200000, "ujuno"));
+        let msg = ExecuteMsg::RegisterName { name: token_id.clone() , years: 2 , avatar_url: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
+        let _res1 = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
+
+        let transfer_msg = ExecuteMsg::TransferNft {
+            recipient: "carl".to_string(),
+            token_id: token_id.clone(),
+        };
+
+        let approved = mock_info("bobby", &coins(200000, "ujuno"));
+        let res = execute(deps.as_mut(), mock_env(), approved, transfer_msg);
+        println!("{:?}", res);
+
+        // Give random transferring power
+        let approve_msg = ExecuteMsg::Approve {
+            spender: "bobby".into(),
+            token_id: token_id.clone(),
+            expires: None,
+        };
+
+        let owner = mock_info("annie", &coins(200000, "ujuno"));
+
+        let res = execute(deps.as_mut(), mock_env(), owner, approve_msg);
+        
+        assert_eq!(res.is_err(), false);
+
+
+        let transfer_msg = ExecuteMsg::TransferNft {
+            recipient: "carl".to_string(),
+            token_id: token_id.clone(),
+        };
+
+        let approved = mock_info("bobby", &coins(200000, "ujuno"));
+        let res = execute(deps.as_mut(), mock_env(), approved, transfer_msg);
+
+        println!("{:?}", res);
+
+    }
+
 }

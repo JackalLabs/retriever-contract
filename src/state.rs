@@ -4,12 +4,6 @@ use serde::{Deserialize, Serialize};
 use cosmwasm_std::{ Addr, CanonicalAddr } ;
 use cw_storage_plus::{Item, Map};
 use cw_utils::Expiration;
-use cosmwasm_storage::{
-    bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
-    Singleton,
-};
-use cosmwasm_std::{StdResult, Storage};
-
 
 pub const OPERATOR_PREFIX: &[u8] = b"operators";
 
@@ -18,6 +12,8 @@ pub const OPERATOR_PREFIX: &[u8] = b"operators";
 pub struct State {
     pub blocks_per_year: u64,   // initially 5048093
     pub owner: Addr,            // who owns the contract
+
+    pub meta_url: String,
 
     //prices to register a name per character count
     pub cost_for_6: u32,
@@ -72,7 +68,13 @@ impl Into<String> for Name {
     }
 }
 
-pub const OPERATORS: Map<String, Expiration> = Map::new("operators");
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Operator {
+    pub owner: String,
+    pub expires: Expiration,
+}
+
+pub const OPERATORS: Map<String, Vec<Operator>> = Map::new("operators");
 
 pub const STATE: Item<State> = Item::new("state");
 

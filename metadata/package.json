@@ -1,0 +1,16 @@
+{
+  "name": "ibc-name-image-gen",
+  "version": "1.0.0",
+  "description": "Displays the images for ibc-name-service",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Marston Connell <marston.ian.connell@gmail.com>",
+  "license": "SEE LICENSE IN LICENSE",
+  "dependencies": {
+    "express": "^4.17.3",
+    "pureimage": "^0.3.8"
+  }
+}

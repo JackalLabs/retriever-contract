@@ -1,5 +1,5 @@
 [package]
-name = "my-first-contract"
+name = "ibc-name-service"
 version = "0.1.0"
 authors = ["Marston Connell <34043723+TheMarstonConnell@users.noreply.github.com>"]
 edition = "2018"
@@ -45,6 +45,7 @@ cosmwasm-storage = { version = "1.0.0-beta5" }
 cw-storage-plus = "0.12"
 cw-utils = "0.12"
 cw2 = "0.12"
+cw0 = "0.10.3"
 schemars = "0.8"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0" }

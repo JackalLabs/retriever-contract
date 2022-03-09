@@ -3,8 +3,8 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
-use my_first_contract::msg::{NameResponse, BlocksResponse, OwnerResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use my_first_contract::state::State;
+use ibc_name_service::msg::{NftInfoResponse, ContractInfoResponse, NumTokensResponse, ApprovedForAllResponse, NameResponse, BlocksResponse, OwnerResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use ibc_name_service::state::State;
 
 fn main() {
     let mut out_dir = current_dir().unwrap();
@@ -19,5 +19,9 @@ fn main() {
     export_schema(&schema_for!(BlocksResponse), &out_dir);
     export_schema(&schema_for!(OwnerResponse), &out_dir);
     export_schema(&schema_for!(NameResponse), &out_dir);
+    export_schema(&schema_for!(ApprovedForAllResponse), &out_dir);
+    export_schema(&schema_for!(NumTokensResponse), &out_dir);
+    export_schema(&schema_for!(ContractInfoResponse), &out_dir);
+    export_schema(&schema_for!(NftInfoResponse), &out_dir);
 
 }

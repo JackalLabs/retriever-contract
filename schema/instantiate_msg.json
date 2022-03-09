@@ -3,7 +3,8 @@
   "title": "InstantiateMsg",
   "type": "object",
   "required": [
-    "blocks_per_year"
+    "blocks_per_year",
+    "meta_url"
   ],
   "properties": {
     "blocks_per_year": {
@@ -58,6 +59,9 @@
       ],
       "format": "uint32",
       "minimum": 0.0
+    },
+    "meta_url": {
+      "type": "string"
     }
   }
 }

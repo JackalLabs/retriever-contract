@@ -40,6 +40,7 @@ mod tests {
 
         let msg = InstantiateMsg { 
             blocks_per_year: 5048093, 
+            meta_url: "example.com".to_string(),
             cost_for_6: Some(1), 
             cost_for_5: Some(2), 
             cost_for_4: Some(4), 
