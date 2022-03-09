@@ -644,8 +644,8 @@ fn query_nft_info( deps: Deps, env:Env, token_id: String ) -> StdResult<NftInfoR
 
 
     Ok(NftInfoResponse {
-        name: token_id.clone(),
-        description: "".to_string(),
+        name: format!("{}.rns", token_id.clone()),
+        description: "An IBC Name Resolver living on the JUNO network.".to_string(),
         image: format!("{}/{}", state.meta_url, token_id),
     })
 } 
