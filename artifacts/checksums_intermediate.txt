@@ -1,0 +1,1 @@
+7e1c02bf86436ed353ade974247c80a7be4f7c3b85b59ad64cfada203816e2ab  ./target/wasm32-unknown-unknown/release/ibc_name_service.wasm

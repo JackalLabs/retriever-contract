@@ -11,6 +11,7 @@ use cosmwasm_std::Binary;
 pub struct InstantiateMsg {
     pub blocks_per_year: u64,
     pub meta_url: String,
+    pub denom: String,
     pub cost_for_6: Option<u32>,
     pub cost_for_5: Option<u32>,
     pub cost_for_4: Option<u32>,

@@ -25,7 +25,7 @@ pub fn instantiate(
         blocks_per_year: msg.blocks_per_year,
         owner: info.sender.clone(),
         meta_url: msg.meta_url.to_string(),
-
+        denom: msg.denom.to_string(),
         //prices to register per character count
         cost_for_6: {
             match msg.cost_for_6 {
@@ -519,7 +519,7 @@ pub fn try_register_name(
     match existing_name {
         Some(x) => {
             if x.expires > current_time {
-                return Err(ContractError::Unauthorized {});
+                return Err(ContractError::Std(StdError::generic_err("Name is already registered.")));
             }
         }
         None => {}
@@ -551,9 +551,10 @@ pub fn try_register_name(
     let total_cost = _cost * years;
 
     let funds = NativeBalance(info.funds);
-    let passes = funds.has(&Coin {denom: String::from("ujuno"), amount: Uint128::from(total_cost)});
+    let passes = funds.has(&Coin {denom: String::from(state.denom), amount: Uint128::from(total_cost)});
+
     if !passes {
-        return Err(ContractError::Unauthorized {});
+        return Err(ContractError::Std(StdError::generic_err(format!("Not enough juno being sent. Wanted: {}", total_cost))));
     }
 
     
@@ -728,6 +729,7 @@ mod tests {
         InstantiateMsg { 
             blocks_per_year: 5048093, 
             meta_url: "example.com".to_string(),
+            denom: "ujuno".to_string(),
             cost_for_6: Some(1), 
             cost_for_5: Some(2), 
             cost_for_4: Some(4), 

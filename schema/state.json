@@ -10,6 +10,7 @@
     "cost_for_4",
     "cost_for_5",
     "cost_for_6",
+    "denom",
     "meta_url",
     "owner"
   ],
@@ -48,6 +49,9 @@
       "type": "integer",
       "format": "uint32",
       "minimum": 0.0
+    },
+    "denom": {
+      "type": "string"
     },
     "meta_url": {
       "type": "string"

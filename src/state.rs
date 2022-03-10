@@ -15,6 +15,8 @@ pub struct State {
 
     pub meta_url: String,
 
+    pub denom: String,          // accepted token denom
+
     //prices to register a name per character count
     pub cost_for_6: u32,
     pub cost_for_5: u32,
