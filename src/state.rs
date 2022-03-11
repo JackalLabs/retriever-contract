@@ -48,6 +48,13 @@ pub struct Name {
     // a URL to an avatar image to be assocaited with the name
     pub avatar_url: Option<String>, 
 
+    // other chains that had to be quirky and get their own coin_id instead of just going with the default and being a pain in my ass
+    pub secret_address: Option<String>, 
+    pub crypto_org_address: Option<String>,
+    pub starname_address: Option<String>,
+    pub persistence_address: Option<String>,
+    pub kava_address: Option<String>,
+
     /// socials ///
     pub website: Option<String>,
     pub email: Option<String>,
