@@ -54,6 +54,7 @@ pub struct Name {
     pub starname_address: Option<String>,
     pub persistence_address: Option<String>,
     pub kava_address: Option<String>,
+    pub terra_address: Option<String>, 
 
     /// socials ///
     pub website: Option<String>,

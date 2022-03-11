@@ -126,6 +126,12 @@
                 "null"
               ]
             },
+            "terra_address": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "twitter": {
               "type": [
                 "string",
@@ -250,6 +256,12 @@
               ]
             },
             "telegram": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "terra_address": {
               "type": [
                 "string",
                 "null"

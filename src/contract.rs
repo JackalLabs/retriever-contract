@@ -83,9 +83,9 @@ pub fn execute(
     match msg {
         ExecuteMsg::SetBlocksPerYear { blocks_per_year} => try_set_blocks_per_year(deps, info, blocks_per_year),
         ExecuteMsg::SetOwner { owner } => try_set_owner(deps, info, owner),
-        ExecuteMsg::RegisterName { name, years , avatar_url, secret_address, crypto_org_address, starname_address, persistence_address, kava_address, website, email, twitter, telegram, discord, instagram, reddit} => try_register_name(deps, env, info, name, years, avatar_url, secret_address, crypto_org_address, starname_address, persistence_address, kava_address, website, email, twitter, telegram, discord, instagram, reddit),
+        ExecuteMsg::RegisterName { name, years , avatar_url, terra_address, secret_address, crypto_org_address, starname_address, persistence_address, kava_address, website, email, twitter, telegram, discord, instagram, reddit} => try_register_name(deps, env, info, name, years, avatar_url, terra_address, secret_address, crypto_org_address, starname_address, persistence_address, kava_address, website, email, twitter, telegram, discord, instagram, reddit),
         ExecuteMsg::AddTime { name, years} => try_add_time(deps, env, info, name, years),
-        ExecuteMsg::UpdateParams { name, avatar_url, secret_address, crypto_org_address, starname_address, persistence_address, kava_address, website, email, twitter, telegram, discord, instagram, reddit} => try_update_name(deps, env, info, name, avatar_url, secret_address, crypto_org_address, starname_address, persistence_address, kava_address, website, email, twitter, telegram, discord, instagram, reddit),
+        ExecuteMsg::UpdateParams { name, avatar_url, terra_address, secret_address, crypto_org_address, starname_address, persistence_address, kava_address, website, email, twitter, telegram, discord, instagram, reddit} => try_update_name(deps, env, info, name, avatar_url, terra_address, secret_address, crypto_org_address, starname_address, persistence_address, kava_address, website, email, twitter, telegram, discord, instagram, reddit),
         ExecuteMsg::TransferNft {recipient, token_id} => transfer_nft (deps, env, info, recipient, token_id),
         ExecuteMsg::SendNft {contract, token_id, message} => try_send_nft (deps, env, info, contract, token_id, message),
         ExecuteMsg::Approve {spender, token_id, expires} => handle_approve (deps, env, info, spender, token_id, expires),
@@ -343,6 +343,7 @@ pub fn _try_transfer_nft (
         owner: address.clone(),
         approvals: vec![],
         avatar_url: None,
+        terra_address: None,
         secret_address: None,
         crypto_org_address: None,
         starname_address: None,
@@ -438,6 +439,7 @@ pub fn try_update_name(
     info: MessageInfo, 
     name: String, 
     avatar_url: Option<String>, 
+    terra_address: Option<String>, 
     secret_address: Option<String>, 
     crypto_org_address: Option<String>, 
     starname_address: Option<String>, 
@@ -480,6 +482,7 @@ pub fn try_update_name(
         owner: existing_name.owner, 
         approvals: vec![],
         avatar_url: avatar_url, 
+        terra_address: terra_address,
         secret_address: secret_address,
         crypto_org_address: crypto_org_address,
         starname_address: starname_address,
@@ -512,6 +515,7 @@ pub fn try_register_name(
     name: String, 
     years: u32, 
     avatar_url: Option<String>, 
+    terra_address: Option<String>, 
     secret_address: Option<String>, 
     crypto_org_address: Option<String>, 
     starname_address: Option<String>, 
@@ -586,6 +590,7 @@ pub fn try_register_name(
         owner: info.sender, 
         approvals: vec![],
         avatar_url: avatar_url, 
+        terra_address: terra_address,
         secret_address: secret_address, 
         crypto_org_address: crypto_org_address, 
         starname_address: starname_address, 
@@ -840,11 +845,11 @@ mod tests {
         assert_eq!(0, res.messages.len());
 
         let auth_info = mock_info("annie", &coins(200000, "ujuno"));
-        let msg = ExecuteMsg::RegisterName { name: String::from("testname") , years: 2 , avatar_url: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
+        let msg = ExecuteMsg::RegisterName { name: String::from("testname") , years: 2 , avatar_url: None, terra_address: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
         let res1 = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
 
         let auth_info = mock_info("bobby", &coins(200000, "ujuno"));
-        let msg = ExecuteMsg::RegisterName { name: String::from("testname") , years: 3 , avatar_url: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
+        let msg = ExecuteMsg::RegisterName { name: String::from("testname") , years: 3 , avatar_url: None, terra_address: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
         let res2 = execute(deps.as_mut(), mock_env(), auth_info, msg);
         
         assert_eq!(res2.is_err(), true);
@@ -865,7 +870,7 @@ mod tests {
         assert_eq!(0, res.messages.len());
 
         let auth_info = mock_info("annie", &coins(200000, "ujuno"));
-        let msg = ExecuteMsg::RegisterName { name: String::from("testname") , years: 2 , avatar_url: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
+        let msg = ExecuteMsg::RegisterName { name: String::from("testname") , years: 2 , avatar_url: None, terra_address: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
         let res1 = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
 
         let auth_info = mock_info("annie", &coins(200000, "ujuno"));
@@ -894,7 +899,7 @@ mod tests {
         assert_eq!(0, res.messages.len());
 
         let auth_info = mock_info("annie", &coins(200000, "ujuno"));
-        let msg = ExecuteMsg::RegisterName { name: String::from("testname") , years: 2 , avatar_url: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
+        let msg = ExecuteMsg::RegisterName { name: String::from("testname") , years: 2 , avatar_url: None, terra_address: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
         let _res = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
 
         
@@ -916,13 +921,13 @@ mod tests {
         assert_eq!(0, res.messages.len());
 
         let auth_info = mock_info("annie", &coins(200000, "ujuno"));
-        let msg = ExecuteMsg::RegisterName { name: String::from("testname") , years: 2 , avatar_url: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
+        let msg = ExecuteMsg::RegisterName { name: String::from("testname") , years: 2 , avatar_url: None, terra_address: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
         let _res = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
 
         
         let res = query(deps.as_ref(), mock_env(), QueryMsg::ResolveAttributes { name : String::from("testname")}).unwrap();
         let value: NameResponse = from_binary(&res).unwrap();
-        assert_eq!(Name {id: String::from("testname") , expires: 10108531 , owner: Addr::unchecked("annie"), approvals: vec![], avatar_url: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None}, value.name);
+        assert_eq!(Name {id: String::from("testname") , expires: 10108531 , owner: Addr::unchecked("annie"), approvals: vec![], avatar_url: None, terra_address: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None}, value.name);
 
     }
 
@@ -941,7 +946,7 @@ mod tests {
         let token_id = "melt".to_string();
 
         let auth_info = mock_info("annie", &coins(200000, "ujuno"));
-        let msg = ExecuteMsg::RegisterName { name: token_id.clone() , years: 2 , avatar_url: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
+        let msg = ExecuteMsg::RegisterName { name: token_id.clone() , years: 2 , avatar_url: None, terra_address: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
         let _res1 = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
 
         // random cannot transfer
@@ -982,7 +987,7 @@ mod tests {
         let token_id = "melt".to_string();
 
         let auth_info = mock_info("annie", &coins(200000, "ujuno"));
-        let msg = ExecuteMsg::RegisterName { name: token_id.clone() , years: 2 , avatar_url: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
+        let msg = ExecuteMsg::RegisterName { name: token_id.clone() , years: 2 , avatar_url: None, terra_address: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None};
         let _res1 = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
 
         let transfer_msg = ExecuteMsg::TransferNft {

@@ -185,6 +185,12 @@
             "null"
           ]
         },
+        "terra_address": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "twitter": {
           "type": [
             "string",
