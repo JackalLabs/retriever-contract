@@ -1,6 +1,5 @@
 #[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr, Coin, Uint128, StdError, CosmosMsg, CanonicalAddr};
+use cosmwasm_std::{entry_point, BankMsg, from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr, Coin, Uint128, StdError, CosmosMsg, CanonicalAddr};
 use cw2::set_contract_version;
 use cw_utils::{ NativeBalance };
 
@@ -92,10 +91,41 @@ pub fn execute(
         ExecuteMsg::Revoke {spender, token_id} => handle_revoke (deps, env, info, spender, token_id),
         ExecuteMsg::ApproveAll {operator, expires} => handle_approve_all (deps, env, info, operator, expires),
         ExecuteMsg::RevokeAll {operator} => handle_revoke_all (deps, env, info, operator),
-
+        ExecuteMsg::WithdrawBalance {} => handle_withdraw_balance(deps, env, info),
 
     }
 }
+
+pub fn handle_withdraw_balance(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
+
+    let state = STATE.load(deps.storage)?;
+
+
+    if info.sender != state.owner {
+        return Err(ContractError::Std(StdError::generic_err(
+            "Not authorized to withdraw payment.",
+        )));
+    }
+
+    // get balance and send all to recipient
+    let balance = deps.querier.query_all_balances(env.contract.address)?;
+    let send = BankMsg::Send {
+        to_address: info.sender.to_string(),
+        amount: balance.clone(),
+    };
+
+    let data_msg = format!("{:?}", balance).into_bytes();
+
+    Ok(Response::new()
+        .add_message(send)
+        .add_attribute("action", "withdraw")
+        .add_attribute("payed_to", info.sender.to_string())
+        .set_data(data_msg))
+    }
 
 pub fn handle_approve_all(
     deps: DepsMut,
