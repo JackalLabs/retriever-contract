@@ -12,12 +12,12 @@ pub struct InstantiateMsg {
     pub blocks_per_year: u64,
     pub meta_url: String,
     pub denom: String,
-    pub cost_for_6: Option<u32>,
-    pub cost_for_5: Option<u32>,
-    pub cost_for_4: Option<u32>,
-    pub cost_for_3: Option<u32>,
-    pub cost_for_2: Option<u32>,
-    pub cost_for_1: Option<u32>
+    pub cost_for_6: Option<u64>,
+    pub cost_for_5: Option<u64>,
+    pub cost_for_4: Option<u64>,
+    pub cost_for_3: Option<u64>,
+    pub cost_for_2: Option<u64>,
+    pub cost_for_1: Option<u64>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -27,7 +27,7 @@ pub enum ExecuteMsg {
     SetOwner { owner: Addr },
     RegisterName { 
         name: String, 
-        years: u32, 
+        years: u64, 
         avatar_url: Option<String>,
         secret_address: Option<String>, 
         crypto_org_address: Option<String>, 
@@ -43,7 +43,7 @@ pub enum ExecuteMsg {
         instagram: Option<String>, 
         reddit: Option<String>,
     },
-    AddTime { name : String, years: u32},
+    AddTime { name : String, years: u64},
     UpdateParams { 
         name: String, 
         avatar_url: Option<String>, 

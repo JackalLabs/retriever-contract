@@ -18,12 +18,12 @@ pub struct State {
     pub denom: String,          // accepted token denom
 
     //prices to register a name per character count
-    pub cost_for_6: u32,
-    pub cost_for_5: u32,
-    pub cost_for_4: u32,
-    pub cost_for_3: u32,
-    pub cost_for_2: u32,
-    pub cost_for_1: u32
+    pub cost_for_6: u64,
+    pub cost_for_5: u64,
+    pub cost_for_4: u64,
+    pub cost_for_3: u64,
+    pub cost_for_2: u64,
+    pub cost_for_1: u64
 }
 
 

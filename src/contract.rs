@@ -1,5 +1,5 @@
 #[cfg(not(feature = "library"))]
-use cosmwasm_std::{entry_point, BankMsg, from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr, Coin, Uint128, StdError, CosmosMsg, CanonicalAddr};
+use cosmwasm_std::{Timestamp, entry_point, BankMsg, from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr, Coin, Uint128, StdError, CosmosMsg, CanonicalAddr};
 use cw2::set_contract_version;
 use cw_utils::{ NativeBalance };
 
@@ -12,6 +12,8 @@ use cw_utils::Expiration;
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ibc_name_service";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+const SECONDS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -403,7 +405,7 @@ pub fn try_add_time(
     _env: Env, 
     info: MessageInfo, 
     name: String, 
-    years: u32
+    years: u64
 )-> Result<Response, ContractError> {
     let store = deps.storage;
 
@@ -487,7 +489,7 @@ pub fn try_update_name(
     // load and save with extra key argument
     let store = deps.storage;
 
-    let current_time = env.block.height;
+    let current_time = env.block.time.nanos();
     let existing_name = JNS.may_load(store, &name.clone());    // checks if the user is able to register the name
     if existing_name.is_err() {
         return Err(ContractError::Std(StdError::not_found("Name not register.")));
@@ -543,7 +545,7 @@ pub fn try_register_name(
     env: Env, 
     info: MessageInfo, 
     name: String, 
-    years: u32, 
+    years: u64, 
     avatar_url: Option<String>, 
     terra_address: Option<String>, 
     secret_address: Option<String>, 
@@ -568,7 +570,8 @@ pub fn try_register_name(
 
     let state = STATE.load(store).unwrap();
 
-    let current_time = env.block.height;
+    let current_time = env.block.time.nanos();
+
     let existing_name = JNS.may_load(store, &name.clone())?;    // checks if the user is able to register the name
     match existing_name {
         Some(x) => {
@@ -613,7 +616,7 @@ pub fn try_register_name(
 
     
 
-    let expiration_date = current_time + ( state.blocks_per_year * years as u64) ; // creates the name data
+    let expiration_date = current_time + ( Timestamp::from_seconds(SECONDS_IN_YEAR * years).nanos()) ; // creates the name data
     let data = Name { 
         id: name.clone(), 
         expires: expiration_date, 
@@ -697,7 +700,7 @@ fn query_nft_info( deps: Deps, env:Env, token_id: String ) -> StdResult<NftInfoR
 
     let ret_name = exists.unwrap().unwrap();
 
-    if ret_name.expires <= env.block.height {
+    if ret_name.expires <= env.block.time.nanos() {
         return Err(StdError::NotFound { kind: "Name is not registered.".to_string()});
     }
 
@@ -754,7 +757,7 @@ fn query_name_attributes(deps: Deps, env: Env, name: String) -> StdResult<NameRe
 
     let ret_name = exists.unwrap().unwrap();
 
-    if ret_name.expires <= env.block.height {
+    if ret_name.expires <= env.block.time.nanos() {
         return Err(StdError::NotFound { kind: "Name is not registered.".to_string()});
     }
 
@@ -769,7 +772,7 @@ fn query_name_owner(deps: Deps, env: Env, name: String) -> StdResult<OwnerRespon
 
     let ret_name = exists.unwrap().unwrap();
 
-    if ret_name.expires <= env.block.height {
+    if ret_name.expires <= env.block.time.nanos() {
         return Err(StdError::NotFound { kind: "Name is not registered.".to_string()});
     }
 
@@ -957,7 +960,7 @@ mod tests {
         
         let res = query(deps.as_ref(), mock_env(), QueryMsg::ResolveAttributes { name : String::from("testname")}).unwrap();
         let value: NameResponse = from_binary(&res).unwrap();
-        assert_eq!(Name {id: String::from("testname") , expires: 10108531 , owner: Addr::unchecked("annie"), approvals: vec![], avatar_url: None, terra_address: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None}, value.name);
+        assert_eq!(Name {id: String::from("testname") , expires: 1571797419879305533 + Timestamp::from_seconds(SECONDS_IN_YEAR * 2).nanos() , owner: Addr::unchecked("annie"), approvals: vec![], avatar_url: None, terra_address: None, secret_address: None, crypto_org_address: None, kava_address: None, persistence_address: None, starname_address: None, website: None, email: None, twitter: None, telegram: None, discord: None, instagram: None, reddit: None}, value.name);
 
     }
 

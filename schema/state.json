@@ -22,32 +22,32 @@
     },
     "cost_for_1": {
       "type": "integer",
-      "format": "uint32",
+      "format": "uint64",
       "minimum": 0.0
     },
     "cost_for_2": {
       "type": "integer",
-      "format": "uint32",
+      "format": "uint64",
       "minimum": 0.0
     },
     "cost_for_3": {
       "type": "integer",
-      "format": "uint32",
+      "format": "uint64",
       "minimum": 0.0
     },
     "cost_for_4": {
       "type": "integer",
-      "format": "uint32",
+      "format": "uint64",
       "minimum": 0.0
     },
     "cost_for_5": {
       "type": "integer",
-      "format": "uint32",
+      "format": "uint64",
       "minimum": 0.0
     },
     "cost_for_6": {
       "type": "integer",
-      "format": "uint32",
+      "format": "uint64",
       "minimum": 0.0
     },
     "denom": {
