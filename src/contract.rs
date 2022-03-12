@@ -454,14 +454,14 @@ pub fn try_add_time(
         return Err(ContractError::Unauthorized {});
     }
 
-    real_name.expires = real_name.expires + ( state.blocks_per_year * years as u64 );
+    real_name.expires = real_name.expires + Timestamp::from_seconds(SECONDS_IN_YEAR * years).nanos();
 
     JNS.save(store, &name.clone(), &real_name)?;
 
     Ok(
-        Response::new().add_attribute("method", "try_register_name")
+        Response::new().add_attribute("method", "try_add_time")
         .add_attribute("tokens_used", total_cost.to_string())
-        .add_attribute("name_registered", name)
+        .add_attribute("name_extended", name)
         .add_attribute("data_accepted", real_name)
     )
 }

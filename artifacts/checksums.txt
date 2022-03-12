@@ -1,1 +1,1 @@
-e95b0718e6ca997ea081ad348edb594baeca09f23a038abe4f748b4ab2dcda42  ibc_name_service.wasm
+90ea504a9dc9ca48fd8a1317113d49a77f242d70a5fd1702caebfe77191864aa  ibc_name_service.wasm
