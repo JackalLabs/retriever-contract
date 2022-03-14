@@ -178,6 +178,7 @@ pub fn handle_revoke(
     spender: String,
     token_id: String,
 ) -> Result<Response, ContractError> {
+    let token_id = token_id.to_lowercase();
 
     let approve = _update_approvals(deps, env, info.sender.to_string(), spender.clone(), token_id.clone(), false, None);
 
@@ -196,6 +197,7 @@ pub fn handle_approve(
     token_id: String,
     expires: Option<Expiration>,
 ) -> Result<Response, ContractError> {
+    let token_id = token_id.to_lowercase();
 
     let approve = _update_approvals(deps, env, info.sender.to_string(), spender.clone(), token_id.clone(), true, expires);
 
@@ -215,6 +217,8 @@ pub fn _update_approvals(
     add: bool,
     expires: Option<Expiration>,
 ) -> Result<NameResponse, ContractError> {
+    let token_id = token_id.to_lowercase();
+
     let token = JNS.may_load(deps.storage, &token_id);
 
     if token.is_err() {
@@ -266,7 +270,8 @@ pub fn try_send_nft (
     token_id: String,
     msg: Binary
 ) -> Result<Response, ContractError> {
-    
+    let token_id = token_id.to_lowercase();
+
     // Unwrap message first
     let _msgs: Vec<CosmosMsg> = vec![from_binary(&msg)?];
 
@@ -289,7 +294,8 @@ pub fn transfer_nft (
     recipient: String,
     token_id: String
 ) -> Result<Response, ContractError> {
-    
+    let token_id = token_id.to_lowercase();
+
     _try_transfer_nft(deps, env, info, recipient.clone(), token_id.clone())?;
 
     Ok(
@@ -343,6 +349,7 @@ pub fn _try_transfer_nft (
     recipient: String,
     token_id: String
 ) -> Result<Response, ContractError> {
+    let token_id = token_id.to_lowercase();
 
     let store = deps.storage;
     let existing_name = JNS.may_load(store, &token_id.clone())?;    // checks if the user is able to register the name
@@ -408,6 +415,7 @@ pub fn try_add_time(
     years: u64
 )-> Result<Response, ContractError> {
     let store = deps.storage;
+    let name = name.to_lowercase();
 
     let existing_name = JNS.may_load(store, &name.clone())?;    // checks if the user is able to register the name
     if existing_name == None {
@@ -485,6 +493,7 @@ pub fn try_update_name(
     instagram: Option<String>, 
     reddit: Option<String>
 ) -> Result<Response, ContractError> {
+    let name = name.to_lowercase();
 
     // load and save with extra key argument
     let store = deps.storage;
@@ -571,6 +580,8 @@ pub fn try_register_name(
     let state = STATE.load(store).unwrap();
 
     let current_time = env.block.time.nanos();
+
+    let name = name.to_lowercase();
 
     let existing_name = JNS.may_load(store, &name.clone())?;    // checks if the user is able to register the name
     match existing_name {
@@ -693,6 +704,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 fn query_nft_info( deps: Deps, env:Env, token_id: String ) -> StdResult<NftInfoResponse> {
 
+    let token_id = token_id.to_lowercase();
+
     let exists = JNS.may_load(deps.storage, &token_id);
     if exists.is_err() {
         return Err(StdError::NotFound { kind: "Name is not registered.".to_string()});
@@ -750,6 +763,9 @@ fn query_owner(deps: Deps) -> StdResult<OwnerResponse> {
 }
 
 fn query_name_attributes(deps: Deps, env: Env, name: String) -> StdResult<NameResponse> {
+    let name = name.to_lowercase();
+
+
     let exists = JNS.may_load(deps.storage, &name);
     if exists.is_err() {
         return Err(StdError::NotFound { kind: "Name is not registered.".to_string()});
@@ -765,6 +781,8 @@ fn query_name_attributes(deps: Deps, env: Env, name: String) -> StdResult<NameRe
 }
 
 fn query_name_owner(deps: Deps, env: Env, name: String) -> StdResult<OwnerResponse> {
+    let name = name.to_lowercase();
+
     let exists = JNS.may_load(deps.storage, &name);
     if exists.is_err() {
         return Err(StdError::NotFound { kind: "Name is not registered.".to_string()});
